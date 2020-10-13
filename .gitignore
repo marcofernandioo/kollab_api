@@ -1,0 +1,6 @@
+node_modules/
+RESThttp/
+.vscode/
+package.json
+package-lock.json
+thots.txt
