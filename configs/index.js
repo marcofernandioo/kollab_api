@@ -1,5 +1,5 @@
 module.exports = {
   mongo: {
-    db_connection: 'mongodb://localhost/tasks'
+    db_connection: 'mongodb://localhost/kollab'
   }
 }

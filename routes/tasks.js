@@ -1,5 +1,7 @@
 var express = require('express')
-var Task = require('../models/taskModel')
+var Task = require('../models/task');
+var Account = require('../models/account');
+var Member = require('../models/member');
 var router = express.Router();
 var async = require('async')
 
@@ -130,9 +132,6 @@ router.put('/update', (req,res) => {
     res.status(400).json({message: 'Enter a VALID form'})
   }
 })
-
-
-
 
 
 module.exports = router
