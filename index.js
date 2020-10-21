@@ -1,7 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dbConnection = require('./configs/index');
-const tasksRouter = require('./routes/tasks')
+const tasksRouter = require('./routes/tasks');
+const usersRouter = require('./routes/users')
 const app = express();
 const port = 6000
 app.use(express.json());
@@ -12,6 +13,7 @@ db.on('error', (err) => console.error(err))
 db.once('open', () => console.log('Connected to DB yow.'))
 
 app.use('/tasks', tasksRouter);
+app.use('/users', usersRouter);
 
 app.listen(port, () => {
   console.log(`Server Running on Port ${port}`)

@@ -1,7 +1,5 @@
 var express = require('express')
 var Task = require('../models/task');
-var Account = require('../models/account');
-var Member = require('../models/member');
 var router = express.Router();
 var async = require('async')
 
@@ -57,12 +55,12 @@ router.post('/create', (req,res) => {
       })
 
       new_task.save((err) => {
-        if (!err) res.json({status: 'ok', msg: 'Task Added'})
-        else res.json({status: 'error', msg: err.message})
+        if (!err) res.json({status: 'ok', message: 'Task Added'})
+        else res.json({status: 'error', message: err.message})
       })
 
   } else {
-    res.json({status: 'error', msg: 'Enter a Valid Form'})
+    res.json({status: 'error', message: 'Enter a Valid Form'})
   }
   
 })

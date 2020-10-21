@@ -15,11 +15,10 @@ var accountSchema = new Schema({
         required: true
     }, 
     bio: String,
-    member: [
-        {
-            member: Schema.Types.ObjectId
-        }
-    ]
+    member: [{
+        type: Schema.Types.ObjectId,
+        ref: "member"
+    }]
     
 })
 
