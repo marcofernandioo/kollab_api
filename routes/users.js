@@ -2,6 +2,8 @@ var express = require('express');
 var app = express.Router();
 var Account = require('../models/account');
 var Member = require('../models/member');
+var crypto = require('crypto');
+var async = require('async');
 var router = express.Router();
 
 //Create an Account.
@@ -21,6 +23,67 @@ router.post('/create/account', (req,res) => {
 
     } else {
         res.json({status: 'error', msg: 'Please Enter a Valid Form'})
+    }
+})
+
+//Login (by Account)
+router.post('/login', (req,res) => {
+    if (req.body && req.body.email && req.body.password){
+        let userData = null;
+        async.waterfall([
+            function (getUserCallback) {
+                Account.findOne({email: req.body.email}, (err,data) => {
+                    if (!err){
+                        if (!data) {
+                            getUserCallback('Invalid Email');
+                        } else {
+                            userData = data;
+                            getUserCallback(null)
+                        }
+                    } else {
+                        getUserCallback(err);
+                    }
+                });
+            }, 
+            function (checkPasswordCallback) {
+                // let hash = userData.hash;
+                // let secret = userData.hash;
+                // const thisHash = crypto.createHmac('sha256', secret).update(req.body.password).digest('hex');
+                if (req.body.password == userData.password){
+                    checkPasswordCallback(null)
+                } else {
+                    checkPasswordCallback('Incorrect Password');
+                }
+            }
+        ], (err) => {
+            if (!err) {
+                req.session.email = req.body.email
+                req.session.fullName = userData.fullName
+                res.json({status: 'ok'});
+            } else {
+                res.json({status: 'error', error: err})
+            }
+        })
+    } else {
+        res.json({status: 'error', msg: 'Please Enter a Valid Form'})
+    }
+})
+
+//Logout
+router.get('/logout', (req,res) => {
+    if (req.session && req.session.fullName) {
+        req.session.destroy();
+        res.json({status: 'ok', message: "you kinda kick yourself out"});
+    }
+    
+})
+
+//Check Login
+router.get('/check', (req,res) => {
+    if (req.session && req.session.fullName) {
+        res.json({msg: 'Logged in!', email: req.session.email, fullname: req.session.fullName})
+    } else {
+        res.json({msg: 'eh.. you kinda did something wrong'})
     }
 })
 
