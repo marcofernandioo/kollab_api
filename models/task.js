@@ -5,6 +5,10 @@ const Schema = new mongoose.Schema({
     required: true
   },
   description: String,
+  status: {
+    type: String, 
+    default: "not done"
+  },
   done: {
     type: Boolean,
     default: false
@@ -17,7 +21,9 @@ const Schema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  deadline: String
+  deadline: String,
+  notes: String //notes are additional information about the status of the task. 
+  //Ex. Notes: Encountered a bug. Skipping this task for some time.
 })
 
 

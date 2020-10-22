@@ -24,7 +24,7 @@ router.get('/find/:id', (req,res) => {
   }
 })
 
-//Display Certain tasks
+//Display Task by status
 router.get('/filter', (req,res) => {
   //Display Done/Not Done Tasks
   if (req.query && req.query.done != null) {
@@ -32,7 +32,7 @@ router.get('/filter', (req,res) => {
       if (!err) res.json({tasks})
       else res.json({status: 'error', message: err.message})
     })
-  //Display Doing Tasks
+  //Display 'Doing' Tasks
   } else if (req.query && req.query.doing) {
     Task.find({doing: req.query.doing}, (err,tasks) => {
       if (!err) res.json({tasks})
@@ -51,7 +51,7 @@ router.post('/create', (req,res) => {
         title: req.body.title, 
         description: req.body.description,
         deadline: req.body.deadline,
-        done: req.body.done
+        status: req.body.status
       })
 
       new_task.save((err) => {
@@ -68,7 +68,7 @@ router.post('/create', (req,res) => {
 //Delete a task
 router.delete('/delete', async(req,res) => {
   if (req.query && req.query.taskId) {
-    async.waterfall([
+    async.waterfall([ //Only Done task(s) could be deleted.
       //1. Find the Task
       function (callback) {
         Task.findById(req.query.taskId, (err,task) => {
@@ -80,7 +80,7 @@ router.delete('/delete', async(req,res) => {
       //2. Check if the Task is Completed or not
       function (task, callback) {
         if (task.done) callback(null, task)
-        else callback("Task isn't Done, Complete This Task Before Deleting..")
+        else callback("Task isn't Done, Complete This Task Before Deleting")
       }
 
     ], function(err,data){
@@ -94,32 +94,33 @@ router.delete('/delete', async(req,res) => {
       }
     })
   } else {
-    res.json({message: 'You forgot to enter the taskId'})
+    res.json({status: 'error',message: 'You forgot to enter the taskId'})
   } 
 })
 
-//Update a task
+//Edit a task
 router.put('/update', (req,res) => {
-  if (req.body && req.body.id && (req.body.title || req.body.description || req.body.done || req.body.deadline || req.body.doing)){
+  if (req.body && req.body.id && (req.body.title || req.body.description || req.body.status || req.body.deadline || req.body.notes)){
     let newTask = {}
-    if (req.body.title) newTask.title = req.body.title
-    //if (req.body.description)  newTask.description = req.body.description
-    if (req.body.description && req.body.description === 'done'){
+
+    if (req.body.title) newTask.title = req.body.title //Edit title
+    if (req.body.description) newTask.description = req.body.description; //Edit description
+    //Edit status. Doing and Done are also being editted automatically.
+    if (req.body.status && req.body.status === 'done'){
       newTask.doing = false
       newTask.done = true
-      newTask.description = req.body.description
-    } else if (req.body.description && req.body.description === 'doing') {
+      newTask.status = req.body.status
+    } else if (req.body.status && req.body.status === 'doing') {
       newTask.doing = true
       newTask.done = false
-      newTask.description = req.body.description
-    } else if (req.body.description && req.body.description === 'stop') {
+      newTask.status = req.body.status
+    } else if (req.body.status && req.body.status === 'pending') {
       newTask.doing = false
       newTask.done = false
-      newTask.description = req.body.description
+      newTask.status = req.body.status
     }
-    if (req.body.done) newTask.done = req.body.done
-    if (req.body.doing) newTask.doing = req.body.doing
-    if (req.body.deadline) newTask.deadline = req.body.deadline
+    if (req.body.deadline) newTask.deadline = req.body.deadline //Update deadline
+    if (req.body.notes) newTask.notes = req.body.notes
 
     Task.findOneAndUpdate({_id:req.body.id}, newTask, (err) => {
       if (!err) res.status(200).json({message: 'Task Updated!'})

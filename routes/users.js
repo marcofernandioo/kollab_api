@@ -114,7 +114,4 @@ router.post('/create/member', (req,res) => {
     }
 })
 
-
-
-
 module.exports = router
