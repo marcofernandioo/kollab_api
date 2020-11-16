@@ -10,7 +10,13 @@ var memberSchema = new Schema({
         type: String, 
         required: true
     }, 
-    tasks: Schema.Types.ObjectId,
+    tasks: [{
+        task: Schema.Types.ObjectId,
+        title: String,
+        description: String,
+        deadline: String,
+        notes: String
+    }]
 
 })
 

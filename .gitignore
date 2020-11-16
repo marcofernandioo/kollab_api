@@ -4,3 +4,4 @@ RESThttp/
 package.json
 package-lock.json
 thots.txt
+.env

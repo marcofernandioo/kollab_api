@@ -1,7 +1,8 @@
 var express = require('express')
 var Task = require('../models/task');
 var router = express.Router();
-var async = require('async')
+var async = require('async');
+const Member = require('../models/member');
 
 //Display all tasks
 router.get('/all', (req,res) => {
@@ -66,7 +67,7 @@ router.post('/create', (req,res) => {
 })
 
 //Delete a task
-router.delete('/delete', async(req,res) => {
+router.delete('/delete', (req,res) => {
   if (req.query && req.query.taskId) {
     async.waterfall([ //Only Done task(s) could be deleted.
       //1. Find the Task
@@ -132,5 +133,37 @@ router.put('/update', (req,res) => {
   }
 })
 
-
+//Assign a task to a specific Member
+router.post('/assign', (req,res) => {
+  if (req.body && req.body.memberId && req.body.title) {
+    async.waterfall([
+      function (saveData) {
+        var task = {};
+        task.title = req.body.title;
+        task.description = req.body.desc;
+        task.deadline = req.body.deadline;
+        task.notes = req.body.notes;
+        saveData(null, task);
+      }, 
+      function (task, updateTask) {
+        Member.findByIdAndUpdate(req.body.memberId, { $push: {tasks: task}}, (err) => {
+          if(!err) {
+            updateTask(null);
+          } else {
+            updateTask(err);
+          }
+        })
+      }
+    ], (err) => {
+      if (err) {
+        res.json({status: 'error', message: err})
+      } else {
+        res.json({status: 'ok', message: 'Task Assigned'})
+      }
+      
+    });
+  } else {
+    res.json({status: 'error', message: 'Invalid Form'})
+  }
+})
 module.exports = router
