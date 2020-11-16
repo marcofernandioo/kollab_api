@@ -1,7 +1,6 @@
 var express = require('express');
 var app = express.Router();
 var Account = require('../models/account');
-var Member = require('../models/member');
 var crypto = require('crypto');
 var async = require('async');
 var router = express.Router();
@@ -26,7 +25,24 @@ router.post('/create/account', (req,res) => {
     }
 })
 
-//Login (by Account)
+//Search an Account.
+router.get('/search', (req,res) => {
+    if (req.query.id) {
+        Account.findById(req.query.id, (err,data) => {
+            if (!err) {
+                if (data) {
+                    res.json({status: 'ok', data})
+                } else {
+                    res.json({status: 'error', msg: 'Not Found'})
+                }
+            } else {
+                res.json({status: 'error', msg: err})
+            }
+        })
+    }
+})
+
+//Login
 router.post('/login', (req,res) => {
     if (req.body && req.body.email && req.body.password){
         let userData = null;
@@ -57,7 +73,7 @@ router.post('/login', (req,res) => {
             }
         ], (err) => {
             if (!err) {
-                req.session.email = req.body.email
+                req.session.email = userData.email
                 req.session.fullName = userData.fullName
                 res.json({status: 'ok'});
             } else {
@@ -84,33 +100,6 @@ router.get('/check', (req,res) => {
         res.json({msg: 'Logged in!', email: req.session.email, fullname: req.session.fullName})
     } else {
         res.json({msg: 'eh.. you kinda did something wrong'})
-    }
-})
-
-//Create a Member
-router.post('/create/member', (req,res) => {
-    if (req.body && req.body.account && req.body.position) {
-
-        var new_member = new Member({
-            account: req.body.account,
-            position: req.body.position
-        })
-
-        new_member.save((err,saved) => {
-            if (!err) {
-                Member.findOneAndUpdate({_id: req.body.account}, { $push: {member: saved}}, (err) => {
-                    if (!err) res.json({status: 'ok', message: 'Member Created!'})
-                    else res.json({status: 'error', message: err.message})
-                })
-            }
-            else res.json({status: 'error', message: err.message})
-        })
-
-        //Add new Member to corresponding Account's list of member array.
-        
-
-    } else {
-        res.json({status:'error', msg: 'Please Enter a Valid Form'})
     }
 })
 

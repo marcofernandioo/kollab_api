@@ -6,6 +6,7 @@ var memberSchema = new Schema({
         type: Schema.Types.ObjectId, 
         required: true 
     },
+    accountName: String,
     position: {
         type: String, 
         required: true
