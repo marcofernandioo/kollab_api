@@ -1,12 +1,13 @@
 var express = require('express');
 var app = express.Router();
 var Account = require('../models/account');
+var permission = require('../systems/permission');
 var crypto = require('crypto');
 var async = require('async');
 var router = express.Router();
 
 //Create an Account.
-router.post('/create/account', (req,res) => {
+router.post('/create', (req,res) => {
     if (req.body && req.body.fullName && req.body.email && req.body.password ) {
         
         var new_account = new Account({
@@ -96,7 +97,7 @@ router.get('/logout', (req,res) => {
 
 //Check Login
 router.get('/check', (req,res) => {
-    if (req.session && req.session.fullName) {
+    if (permission.isLoggedIn(req)) {
         res.json({msg: 'Logged in!', email: req.session.email, fullname: req.session.fullName})
     } else {
         res.json({msg: 'eh.. you kinda did something wrong'})

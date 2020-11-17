@@ -7,12 +7,17 @@ var memberSchema = new Schema({
         required: true 
     },
     accountName: String,
+    group: {
+        type: Schema.Types.ObjectId, 
+        required: true
+    }, 
+    groupName: String,
     position: {
         type: String, 
         required: true
     }, 
     tasks: [{
-        task: Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         title: String,
         description: String,
         deadline: String,
