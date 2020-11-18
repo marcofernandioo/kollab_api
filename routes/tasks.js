@@ -2,6 +2,7 @@ var express = require('express')
 var Task = require('../models/task');
 var router = express.Router();
 var async = require('async');
+var permission = require('../systems/permission');
 const Member = require('../models/member');
 
 //Display all tasks
@@ -15,44 +16,58 @@ router.get('/all', (req,res) => {
 
 //Find Task by ID
 router.get('/find/:id', (req,res) => {
-  if (req.params.id) {
-    Task.findById(req.params.id, (err,data) => {
-      if (!err) res.json({data:data})
-      else res.json({err: err.message})
-    })
+  if (permission.isLoggedIn(req)) {
+    if (req.params.id) {
+      Task.findById(req.params.id, (err,data) => {
+        if (!err) res.json({data:data})
+        else res.json({err: err.message})
+      })
+    } else {
+      res.json({status: 'error',message: 'Enter Valid URL'})
+    }
   } else {
-    res.json({status: 'error',message: 'Enter Valid URL'})
-  }
+    res.json({status: 'error', msg: 'Not Logged In!'});
+  } 
 })
 
 //Display Task by status
 router.get('/filter', (req,res) => {
-  //Display Done/Not Done Tasks
-  if (req.query && req.query.done != null) {
-    Task.find({done: req.query.done}, (err,tasks) => {
-      if (!err) res.json({tasks})
-      else res.json({status: 'error', message: err.message})
-    })
-  //Display 'Doing' Tasks
-  } else if (req.query && req.query.doing) {
-    Task.find({doing: req.query.doing}, (err,tasks) => {
-      if (!err) res.json({tasks})
-      else res.json({status: 'error', message: err.message})
-    })
+  if (permission.isLoggedIn(req)) {
+    //Display Done/Not Done Tasks
+    if (req.query && req.query.done != null) {
+      Task.find({done: req.query.done}, (err,tasks) => {
+        if (!err) res.json({tasks})
+        else res.json({status: 'error', message: err.message})
+      })
+
+    //Display 'Doing' Tasks
+    } else if (req.query && req.query.doing) {
+      Task.find({doing: req.query.doing}, (err,tasks) => {
+        if (!err) res.json({tasks})
+        else res.json({status: 'error', message: err.message})
+      })
+    } else {
+      res.json({status: 'error', message: 'Enter Valid URL'})
+    }
   } else {
-    res.json({status: 'error', message: 'Enter Valid URL'})
+    res.json({status: 'error', msg: 'Not Logged In!'});
   }
+  
 })
 
 //Create a task
 router.post('/create', (req,res) => {
-  if (req.body && req.body.title) {
+  if (permission.isLoggedIn(req)) {
+    if (req.body && req.body.title) {
     
       var new_task = new Task({
         title: req.body.title, 
         description: req.body.description,
+        status: req.body.status,
+        createDate: Date.now(),
         deadline: req.body.deadline,
-        status: req.body.status
+        doBy: req.session.fullName,
+        doId: req.session.accountId
       })
 
       new_task.save((err) => {
@@ -60,9 +75,13 @@ router.post('/create', (req,res) => {
         else res.json({status: 'error', message: err.message})
       })
 
+    } else {
+      res.json({status: 'error', message: 'Enter a Valid Form'})
+    }
   } else {
-    res.json({status: 'error', message: 'Enter a Valid Form'})
+    res.json({status: 'error', msg: 'Not Logged In!'})
   }
+  
   
 })
 

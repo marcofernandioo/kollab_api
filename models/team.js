@@ -7,9 +7,13 @@ var teamSchema = new Schema ({
         required: true
     },
     teamDescription: String,
+    teamOwner: String,
     groups:  [{
         type: Schema.Types.ObjectId,
         groupName: String,
+    }],
+    members: [{
+        fullName: String
     }]
 })
 

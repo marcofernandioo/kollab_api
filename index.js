@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const tasksRouter = require('./routes/tasks');
 const accountsRouter = require('./routes/accounts');
 const membersRouter = require('./routes/members');
+const teamsRouter = require('./routes/team');
 var session = require('express-session');
 const dotenv = require('dotenv');
 const app = express();
@@ -26,6 +27,7 @@ db.once('open', () => console.log('Connected to DB yow.'))
 app.use('/tasks', tasksRouter);
 app.use('/accounts', accountsRouter);
 app.use('/members', membersRouter)
+app.use('/teams', teamsRouter);
 
 app.listen(port, () => {
   console.log(`We Server Runnin' on Port ${port}`)

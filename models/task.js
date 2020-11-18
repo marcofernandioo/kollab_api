@@ -22,8 +22,14 @@ const Schema = new mongoose.Schema({
     default: Date.now
   },
   deadline: String,
-  notes: String //notes are additional information about the status of the task. 
+  notes: String, //notes are additional information about the status of the task. 
   //Ex. Notes: Encountered a bug. Skipping this task for some time.
+  // doBy: {
+  //   type: mongoose.Schema.Types.ObjectId, 
+  //   name: String
+  // }
+  doBy: String,
+  doId: mongoose.Schema.Types.ObjectId
 })
 
 

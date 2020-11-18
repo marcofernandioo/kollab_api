@@ -17,7 +17,8 @@ var accountSchema = new Schema({
     bio: String,
     member: [{
         type: Schema.Types.ObjectId,
-        
+        team: String, 
+        position: String,
     }]
     
 })

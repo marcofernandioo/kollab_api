@@ -74,8 +74,9 @@ router.post('/login', (req,res) => {
             }
         ], (err) => {
             if (!err) {
-                req.session.email = userData.email
-                req.session.fullName = userData.fullName
+                req.session.email = userData.email;
+                req.session.fullName = userData.fullName;
+                req.session.accountId = userData._id;
                 res.json({status: 'ok'});
             } else {
                 res.json({status: 'error', error: err})

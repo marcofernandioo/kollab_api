@@ -19,9 +19,6 @@ var memberSchema = new Schema({
     tasks: [{
         type: Schema.Types.ObjectId,
         title: String,
-        description: String,
-        deadline: String,
-        notes: String
     }]
 
 })
