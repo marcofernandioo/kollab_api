@@ -29,7 +29,7 @@ const Schema = new mongoose.Schema({
   //   name: String
   // }
   doBy: String,
-  doId: mongoose.Schema.Types.ObjectId
+  doId: mongoose.Schema.Types.ObjectId // doId is the member's id
 })
 
 

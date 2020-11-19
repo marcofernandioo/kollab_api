@@ -5,12 +5,27 @@ var async = require('async');
 var permission = require('../systems/permission');
 const Member = require('../models/member');
 
-//Display all tasks
-router.get('/all', (req,res) => {
-  Task.find((err,allTask) => {
-    if (!err) res.json({allTask})
-    else res.json({err: err.message})
-  })
+//Display all tasks of a member/account 
+router.get('/all/:id/', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    if (req.params && req.params.id) {
+      Task.find({doId: req.params.id}, (err,data) => {
+        if (!err) {
+          if (data) {
+            res.json({status: 'ok', data:data});
+          } else {
+            res.json({status: 'error', msg: 'User with this member id not found'})
+          }
+        } else {
+          res.json({status: 'error', msg: err})
+        }
+      })
+    } else {
+      res.json({status: 'error', msg: 'Invalid param'});
+    }
+  } else {
+    res.json({status: 'error', msg: 'Not logged in!'});
+  }
 
 });
 
@@ -30,8 +45,8 @@ router.get('/find/:id', (req,res) => {
   } 
 })
 
-//Display Task by status
-router.get('/filter', (req,res) => {
+//Display Task by status 
+router.get('/filter/:done/:doing', (req,res) => {
   if (permission.isLoggedIn(req)) {
     //Display Done/Not Done Tasks
     if (req.query && req.query.done != null) {
@@ -87,35 +102,46 @@ router.post('/create', (req,res) => {
 
 //Delete a task
 router.delete('/delete', (req,res) => {
-  if (req.query && req.query.taskId) {
-    async.waterfall([ //Only Done task(s) could be deleted.
-      //1. Find the Task
-      function (callback) {
-        Task.findById(req.query.taskId, (err,task) => {
-          if(!err && task) callback(null, task)
-          else callback('Task Not Found')
-        })
-      }, 
-
-      //2. Check if the Task is Completed or not
-      function (task, callback) {
-        if (task.done) callback(null, task)
-        else callback("Task isn't Done, Complete This Task Before Deleting")
-      }
-
-    ], function(err,data){
-      if (!err){
-        data.remove((err) => {
-          if (err) res.json({status: 'error', message: err.message})
-          else res.json({status: 'ok', message: 'Task Successfully Deleted'})
-        })
-      } else {
-        res.json({status: 'error', message: err})
-      }
-    })
+  if (permission.isLoggedIn(req)) {
+    if (req.query && req.query.taskId) {
+      async.waterfall([ //Only Done task(s) could be deleted.
+        //1. Find the Task and check if current account can delete this task.
+        function (callback) {
+          Task.findById(req.query.taskId, (err,task) => {
+            if(!err && task) {
+              if (task._id === req.body.taskId) {
+                callback(null, task)
+              } else {
+                callback("You don't have permission to delete this task");
+              }
+            }
+            else callback('Task Not Found')
+          })
+        }, 
+  
+        //2. Check if the Task is Completed or not
+        function (task, callback) {
+          if (task.done) callback(null, task)
+          else callback("Task isn't Done, Complete This Task Before Deleting")
+        }
+  
+      ], function(err,data){
+        if (!err){
+          data.remove((err) => {
+            if (err) res.json({status: 'error', msg: err.message})
+            else res.json({status: 'ok', msg: 'Task Successfully Deleted'})
+          })
+        } else {
+          res.json({status: 'error', msg: err})
+        }
+      })
+    } else {
+      res.json({status: 'error',msg: 'You forgot to enter the taskId'})
+    }
   } else {
-    res.json({status: 'error',message: 'You forgot to enter the taskId'})
-  } 
+    res.json({status: 'error', msg: 'Not logged in!'});
+  }
+   
 })
 
 //Edit a task
