@@ -17,8 +17,8 @@ router.post('/create', (req,res) => {
         })
 
         new_account.save((err) => {
-            if (!err) res.json({status: 'ok', message: 'Account Created'})
-            else res.json({status: 'error', message: err.message})
+            if (!err) res.json({status: 'ok', msg: 'Account Created'})
+            else res.json({status: 'error', msg: err.message})
         })
 
     } else {
@@ -77,7 +77,7 @@ router.post('/login', (req,res) => {
                 req.session.email = userData.email;
                 req.session.fullName = userData.fullName;
                 req.session.accountId = userData._id;
-                res.json({status: 'ok'});
+                res.json({status: 'ok', msg: 'Logged in'});
             } else {
                 res.json({status: 'error', error: err})
             }
@@ -89,9 +89,9 @@ router.post('/login', (req,res) => {
 
 //Logout
 router.get('/logout', (req,res) => {
-    if (req.session && req.session.fullName) {
+    if (permission.isLoggedIn(req)) {
         req.session.destroy();
-        res.json({status: 'ok', message: "you kinda kick yourself out"});
+        res.json({status: 'ok', msg: "you kicked yourself out"});
     }
     
 })

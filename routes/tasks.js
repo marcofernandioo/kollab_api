@@ -4,6 +4,7 @@ var router = express.Router();
 var async = require('async');
 var permission = require('../systems/permission');
 const Member = require('../models/member');
+const Account = require('../models/account');
 
 //Display all tasks of a member/account 
 router.get('/all/:id/', (req,res) => {
@@ -38,7 +39,7 @@ router.get('/find/:id', (req,res) => {
         else res.json({err: err.message})
       })
     } else {
-      res.json({status: 'error',message: 'Enter Valid URL'})
+      res.json({status: 'error',msg: 'Enter Valid URL'})
     }
   } else {
     res.json({status: 'error', msg: 'Not Logged In!'});
@@ -52,17 +53,17 @@ router.get('/filter/:done/:doing', (req,res) => {
     if (req.query && req.query.done != null) {
       Task.find({done: req.query.done}, (err,tasks) => {
         if (!err) res.json({tasks})
-        else res.json({status: 'error', message: err.message})
+        else res.json({status: 'error', msg: err.message})
       })
 
     //Display 'Doing' Tasks
     } else if (req.query && req.query.doing) {
       Task.find({doing: req.query.doing}, (err,tasks) => {
         if (!err) res.json({tasks})
-        else res.json({status: 'error', message: err.message})
+        else res.json({status: 'error', msg: err.message})
       })
     } else {
-      res.json({status: 'error', message: 'Enter Valid URL'})
+      res.json({status: 'error', msg: 'Enter Valid URL'})
     }
   } else {
     res.json({status: 'error', msg: 'Not Logged In!'});
@@ -70,8 +71,8 @@ router.get('/filter/:done/:doing', (req,res) => {
   
 })
 
-//Create a task
-router.post('/create', (req,res) => {
+//Create a personal task 
+router.post('/create/account', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.body && req.body.title) {
     
@@ -85,31 +86,56 @@ router.post('/create', (req,res) => {
         doId: req.session.accountId
       })
 
-      new_task.save((err) => {
-        if (!err) res.json({status: 'ok', message: 'Task Added'})
-        else res.json({status: 'error', message: err.message})
+      //res.json({status: 'ok', msg: 'Task Added'})
+
+      new_task.save((err,data) => {
+        if (!err) {
+          if (data) {
+            Account.findOneAndUpdate({_id: req.session.accountId}, { $push: {personalTasks: data}}, (err) => {
+              if (!err) {
+                res.json({status: 'ok', msg: 'Task Created'});
+              } else {
+                res.json({status: 'error', msg: err});
+              }
+            });
+          } else {
+            res.json({status: 'error', msg: 'Task Not Found'});
+          }
+        } else {
+          res.json({status: 'error', msg: err})
+        }
       })
 
     } else {
-      res.json({status: 'error', message: 'Enter a Valid Form'})
+      res.json({status: 'error', msg: 'Enter a Valid Form'})
     }
   } else {
     res.json({status: 'error', msg: 'Not Logged In!'})
   }
-  
-  
 })
 
-//Delete a task
+//Create a team task
+router.post('/create/member', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    if (req.body && req.body.title) {
+
+    }
+  } else {
+    res.json({status: 'error', msg: 'Not Logged In!'})
+  }
+})
+
+//Delete a personal task
 router.delete('/delete', (req,res) => {
   if (permission.isLoggedIn(req)) {
+    //Also implement the permission.edit system.
     if (req.query && req.query.taskId) {
       async.waterfall([ //Only Done task(s) could be deleted.
         //1. Find the Task and check if current account can delete this task.
         function (callback) {
           Task.findById(req.query.taskId, (err,task) => {
             if(!err && task) {
-              if (task._id === req.body.taskId) {
+              if (task.doId == req.session.accountId) {
                 callback(null, task)
               } else {
                 callback("You don't have permission to delete this task");
@@ -129,7 +155,16 @@ router.delete('/delete', (req,res) => {
         if (!err){
           data.remove((err) => {
             if (err) res.json({status: 'error', msg: err.message})
-            else res.json({status: 'ok', msg: 'Task Successfully Deleted'})
+            else {
+              Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: {_id: req.query.taskId}}}, { safe: true, upsert: true }, (err) => {
+                if (!err) {
+                  res.json({status: 'ok', msg: 'Task Successfully Deleted'})
+                } else {
+                  res.json({status: 'error', msg: err});
+                }
+              })
+            }
+            
           })
         } else {
           res.json({status: 'error', msg: err})
@@ -146,36 +181,41 @@ router.delete('/delete', (req,res) => {
 
 //Edit a task
 router.put('/update', (req,res) => {
-  if (req.body && req.body.id && (req.body.title || req.body.description || req.body.status || req.body.deadline || req.body.notes)){
-    let newTask = {}
-
-    if (req.body.title) newTask.title = req.body.title //Edit title
-    if (req.body.description) newTask.description = req.body.description; //Edit description
-    //Edit status. Doing and Done are also being editted automatically.
-    if (req.body.status && req.body.status === 'done'){
-      newTask.doing = false
-      newTask.done = true
-      newTask.status = req.body.status
-    } else if (req.body.status && req.body.status === 'doing') {
-      newTask.doing = true
-      newTask.done = false
-      newTask.status = req.body.status
-    } else if (req.body.status && req.body.status === 'pending') {
-      newTask.doing = false
-      newTask.done = false
-      newTask.status = req.body.status
+  if (permission.isLoggedIn(req)) {
+    if (req.body && req.body.id && (req.body.title || req.body.description || req.body.status || req.body.deadline || req.body.notes)){
+      let newTask = {}
+  
+      if (req.body.title) newTask.title = req.body.title //Edit title
+      if (req.body.description) newTask.description = req.body.description; //Edit description
+      //Edit status. Doing and Done are also being editted automatically.
+      if (req.body.status && req.body.status === 'done'){
+        newTask.doing = false
+        newTask.done = true
+        newTask.status = req.body.status
+      } else if (req.body.status && req.body.status === 'doing') {
+        newTask.doing = true
+        newTask.done = false
+        newTask.status = req.body.status
+      } else if (req.body.status && req.body.status === 'pending') {
+        newTask.doing = false
+        newTask.done = false
+        newTask.status = req.body.status
+      }
+      if (req.body.deadline) newTask.deadline = req.body.deadline //Update deadline
+      if (req.body.notes) newTask.notes = req.body.notes
+  
+      Task.findOneAndUpdate({_id:req.body.id}, newTask, (err) => {
+        if (!err) res.status(200).json({message: 'Task Updated!'})
+        else res.status(500).json({msg: err.message})
+      })
+  
+    } else {
+      res.status(400).json({msg: 'Enter a VALID form'})
     }
-    if (req.body.deadline) newTask.deadline = req.body.deadline //Update deadline
-    if (req.body.notes) newTask.notes = req.body.notes
-
-    Task.findOneAndUpdate({_id:req.body.id}, newTask, (err) => {
-      if (!err) res.status(200).json({message: 'Task Updated!'})
-      else res.status(500).json({message: err.message})
-    })
-
   } else {
-    res.status(400).json({message: 'Enter a VALID form'})
+    res.json({status: 'error', msg: 'Not logged in!'});
   }
+  
 })
 
 //Assign a task to a specific Member
@@ -201,14 +241,14 @@ router.post('/assign', (req,res) => {
       }
     ], (err) => {
       if (err) {
-        res.json({status: 'error', message: err})
+        res.json({status: 'error', msg: err})
       } else {
-        res.json({status: 'ok', message: 'Task Assigned'})
+        res.json({status: 'ok', msg: 'Task Assigned'})
       }
       
     });
   } else {
-    res.json({status: 'error', message: 'Invalid Form'})
+    res.json({status: 'error', msg: 'Invalid Form'})
   }
 })
 

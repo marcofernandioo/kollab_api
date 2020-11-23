@@ -19,6 +19,10 @@ var accountSchema = new Schema({
         type: Schema.Types.ObjectId,
         team: String, 
         position: String,
+    }],
+    personalTasks: [{
+        type: Schema.Types.ObjectId, 
+        title: String
     }]
     
 })

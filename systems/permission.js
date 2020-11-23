@@ -4,10 +4,15 @@ var rank = {
     Manager: 50, 
     Member: 10
 }
+exports.rank = rank;
 var isLoggedIn = exports.isLoggedIn = function (req) {
     return req.session && req.session.fullName;
 }
 
-var assignPermission = exports.assignPermission = function (req) {
+var canAssignTask = exports.assignPermission = function (req) {
+
+}
+
+var canEditTeamPermission = exports.canEditTeamPermission = function (req) {
 
 }

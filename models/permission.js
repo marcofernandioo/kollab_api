@@ -5,17 +5,11 @@ var teamPermissionSchema = new Schema({
     team: Schema.Types.ObjectId,
     teamName: String,
     minAssignTask: Number, 
-    maxAssignTask: Number, 
     minPromote: Number, 
-    maxPromote: Number,
-    minAddMember: Number, 
-    maxAddMember: Number, 
+    minAddMember: Number,  
     minViewTask: Number, 
-    maxViewTask: Number,
     minAddTask: Number, 
-    maxAddTask: Number, 
-    minCreateGroup: Number, 
-    maxCreateGroup: Number,
+    minCreateGroup: Number
 })
 
 var Permission = mongoose.model('teamPermission', teamPermissionSchema);

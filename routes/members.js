@@ -18,11 +18,11 @@ router.post('/create', (req,res) => {
             new_member.save((err,saved) => {
                 if (!err) {
                     Account.findOneAndUpdate({_id: req.body.account}, { $push: {member: saved}}, (err) => {
-                        if (!err) res.json({status: 'ok', message: 'Member Created!'})
-                        else res.json({status: 'error', message: err.message})
+                        if (!err) res.json({status: 'ok', msg: 'Member Created!'})
+                        else res.json({status: 'error', msg: err.message})
                     })
                 }
-                else res.json({status: 'error', message: err.message})
+                else res.json({status: 'error', msg: err.message})
             })
     
         } else {
