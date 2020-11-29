@@ -135,13 +135,13 @@ router.delete('/delete', (req,res) => {
         function (callback) {
           Task.findById(req.query.taskId, (err,task) => {
             if(!err && task) {
-              if (task.doId == req.session.accountId) {
+              if (task.doId == req.session.accountId) { //Only proceed if the Task is owned by the logged in Account.
                 callback(null, task)
               } else {
                 callback("You don't have permission to delete this task");
               }
             }
-            else callback('Task Not Found')
+            else callback(err);
           })
         }, 
   
@@ -156,7 +156,7 @@ router.delete('/delete', (req,res) => {
           data.remove((err) => {
             if (err) res.json({status: 'error', msg: err.message})
             else {
-              Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: {_id: req.query.taskId}}}, { safe: true, upsert: true }, (err) => {
+              Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: req.query.taskId}}, { safe: true, upsert: true }, (err) => {
                 if (!err) {
                   res.json({status: 'ok', msg: 'Task Successfully Deleted'})
                 } else {
