@@ -7,11 +7,11 @@ var memberSchema = new Schema({
         required: true 
     },
     accountName: String,
-    group: {
-        type: Schema.Types.ObjectId, 
-        required: true
-    }, 
-    groupName: String,
+    // group: {
+    //     type: Schema.Types.ObjectId, 
+    //     required: true
+    // }, 
+    // groupName: String,
     position: {
         type: String, 
         required: true

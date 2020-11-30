@@ -1,6 +1,7 @@
 var express = require('express');
 var Account = require('../models/account');
 var Member = require('../models/member');
+var Team = require('../models/team');
 var async = require('async');
 var permission = require('../systems/permission');
 var router = express.Router();
@@ -8,17 +9,30 @@ var router = express.Router();
 //Create a Member
 router.post('/create', (req,res) => {
     if (permission.isLoggedIn(req)) {
-        if (req.body && req.body.account && req.body.position) {
+        if (req.body && req.body.position && req.body.teamId) {
 
             var new_member = new Member({
-                account: req.body.account,
+                account: req.session.accountId,
                 position: req.body.position,
                 accountName: req.session.fullName
             })
     
-            new_member.save((err,saved) => {
+            new_member.save((err,member) => { //Save the Member data.
                 if (!err) {
-                    Account.findOneAndUpdate({_id: req.body.account}, { $push: {member: saved}}, (err) => {
+                    async.waterfall([
+                        function (pushMemberList) { //push Member to Account's Member List.
+                            Account.findOneAndUpdate({_id: req.body.account}, { $push: {member: member}}, (err) => { 
+                                if (!err) pushMemberList(null);
+                                else pushMemberList(err);
+                            })
+                        },
+                        function (pushTeamList) {
+                            Team.findOneAndUpdate({_id: req.body.teamId} , { $push: {members:member}}, (err) => {
+                                if (!err) pushTeamList(null);
+                                else pushTeamList(err);
+                            })
+                        }
+                    ], (err) => {
                         if (!err) res.json({status: 'ok', msg: 'Member Created!'})
                         else res.json({status: 'error', msg: err.message})
                     })
@@ -78,7 +92,8 @@ router.get('/delete', (req,res) => {
                         //The found member doesn't belong to the logged in Account.
                         callback('You don\'t have permission to delete this member');
                     }
-                }
+                },
+                // function ()
             ], function (err,data) {
                 if (!err) {
                     data.remove((err) => {
@@ -88,7 +103,7 @@ router.get('/delete', (req,res) => {
                                 if (!err) {
                                   res.json({status: 'ok', msg: 'Member Successfully Deleted'})
                                 } else {
-                                  res.json({status: 'error', msg: err});
+                                  res.json({status: 'error', msg: err.message});
                                 }
                             })
                         }

@@ -4,7 +4,7 @@ const Permission = require('../models/permission');
 var permission = require('../systems/permission');
 var router = express.Router();
 
-//Create team
+//Create a Team
 router.post('/create', (req,res) => {
     if (permission.isLoggedIn(req)) {
         if (req.body && req.body.name) {
@@ -12,7 +12,7 @@ router.post('/create', (req,res) => {
                 teamName: req.body.name, 
                 teamDescription: req.body.description, 
                 teamOwner: req.session.fullName,
-                teamOwnerId: req.session.account.Id,
+                teamOwnerId: req.session.accountId,
                 members: [], 
                 groups: []
             });

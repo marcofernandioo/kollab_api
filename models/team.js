@@ -14,7 +14,7 @@ var teamSchema = new Schema ({
         groupName: String,
     }],
     members: [{
-        fullName: String
+        type: Schema.Types.ObjectId
     }]
 })
 

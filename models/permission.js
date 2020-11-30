@@ -9,7 +9,7 @@ var teamPermissionSchema = new Schema({
     minAddMember: Number,  
     minViewTask: Number, 
     minAddTask: Number, 
-    minCreateGroup: Number
+    minEditGroup: Number //Edit includes create, delete, etc.
 })
 
 var Permission = mongoose.model('teamPermission', teamPermissionSchema);
