@@ -10,6 +10,7 @@ var accountSchema = new Schema({
         type: String, 
         required: true
     }, 
+    key: String,
     email: {
         type: String, 
         required: true

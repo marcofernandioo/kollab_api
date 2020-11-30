@@ -9,11 +9,14 @@ var router = express.Router();
 //Create an Account.
 router.post('/create', (req,res) => {
     if (req.body && req.body.fullName && req.body.email && req.body.password ) {
-        
+        const key = crypto.randomBytes(16).toString('hex');
+        const hashed = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
+
         var new_account = new Account({
             fullName: req.body.fullName, 
             email: req.body.email,
-            password: req.body.password,
+            password: hashed,
+            key: key
         })
 
         new_account.save((err) => {
@@ -48,6 +51,7 @@ router.post('/login', (req,res) => {
     if (req.body && req.body.email && req.body.password){
         let userData = null;
         async.waterfall([
+            //1. Get email and password.
             function (getUserCallback) {
                 Account.findOne({email: req.body.email}, (err,data) => {
                     if (!err){
@@ -63,10 +67,13 @@ router.post('/login', (req,res) => {
                 });
             }, 
             function (checkPasswordCallback) {
-                // let hash = userData.hash;
-                // let secret = userData.hash;
-                // const thisHash = crypto.createHmac('sha256', secret).update(req.body.password).digest('hex');
-                if (req.body.password == userData.password){
+                //2. Get secret and hash
+                let password = userData.password;
+                let key = userData.key;
+                //3. Use this secret to encrypt password
+                const thisHash = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
+                //4. Compare this encrypted password to hash
+                if (thisHash == password){
                     checkPasswordCallback(null)
                 } else {
                     checkPasswordCallback('Incorrect Password');

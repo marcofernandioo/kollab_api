@@ -59,4 +59,13 @@ router.post('/setpermission', (req,res) => {
     }
 })
 
+router.post('/delete', (req,res) => {
+    if (permission.isLoggedIn(req)) {
+
+    } else {
+        res.json({status: 'error', msg: 'Not logged in'})
+    }
+    //1. Check if logged in.
+    //2. Check if 
+})
 module.exports = router;
