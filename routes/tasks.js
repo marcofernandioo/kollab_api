@@ -71,6 +71,8 @@ router.get('/filter/:done/:doing', (req,res) => {
   
 })
 
+//Display Task by status: whether the task is doing, done, or notdone.
+
 //Create a personal task 
 router.post('/create/account', (req,res) => {
   if (permission.isLoggedIn(req)) {
@@ -85,8 +87,6 @@ router.post('/create/account', (req,res) => {
         doBy: req.session.fullName,
         doId: req.session.accountId
       })
-
-      //res.json({status: 'ok', msg: 'Task Added'})
 
       new_task.save((err,data) => {
         if (!err) {
@@ -179,36 +179,60 @@ router.delete('/delete', (req,res) => {
    
 })
 
-//Edit a task
+//Edit a personal task
 router.put('/update', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.body && req.body.id && (req.body.title || req.body.description || req.body.status || req.body.deadline || req.body.notes)){
-      let newTask = {}
-  
-      if (req.body.title) newTask.title = req.body.title //Edit title
-      if (req.body.description) newTask.description = req.body.description; //Edit description
-      //Edit status. Doing and Done are also being editted automatically.
-      if (req.body.status && req.body.status === 'done'){
-        newTask.doing = false
-        newTask.done = true
-        newTask.status = req.body.status
-      } else if (req.body.status && req.body.status === 'doing') {
-        newTask.doing = true
-        newTask.done = false
-        newTask.status = req.body.status
-      } else if (req.body.status && req.body.status === 'pending') {
-        newTask.doing = false
-        newTask.done = false
-        newTask.status = req.body.status
-      }
-      if (req.body.deadline) newTask.deadline = req.body.deadline //Update deadline
-      if (req.body.notes) newTask.notes = req.body.notes
-  
-      Task.findOneAndUpdate({_id:req.body.id}, newTask, (err) => {
-        if (!err) res.status(200).json({message: 'Task Updated!'})
-        else res.status(500).json({msg: err.message})
-      })
-  
+      async.waterfall([
+        function (findTask) {
+          Task.findById(req.body.id, (err,task) => {
+            if (!err) {
+              if (task) {
+                findTask(null,task);
+              } else {
+                findTask('Task not found.')
+              }
+            } else {
+              findTask(err);
+            }
+          })
+        },
+        function (task, checkUpdateEligibility) {
+          if (task.doId == req.session.accountId) {
+            checkUpdateEligibility(null);
+          } else {
+            checkUpdateEligibility('You don\'t have permission to update this task');
+          }
+        }
+      ], (err) => {
+        if (!err) {
+          let newTask = {}
+          if (req.body.title) newTask.title = req.body.title //Edit task title
+          if (req.body.description) newTask.description = req.body.description; //Edit task description
+          if (req.body.status && req.body.status === 'done'){ //Edit status. Doing and Done are also being editted automatically.
+            newTask.doing = false
+            newTask.done = true
+            newTask.status = req.body.status
+          } else if (req.body.status && req.body.status === 'doing') {
+            newTask.doing = true
+            newTask.done = false
+            newTask.status = req.body.status
+          } else if (req.body.status && req.body.status === 'pending') {
+            newTask.doing = false
+            newTask.done = false
+            newTask.status = req.body.status
+          }
+          if (req.body.deadline) newTask.deadline = req.body.deadline //Edit deadline
+          if (req.body.notes) newTask.notes = req.body.notes // Edit task notes
+
+          Task.findOneAndUpdate({_id:req.body.id}, newTask, (err) => {
+            if (!err) res.json({status: 'ok', message: 'Task Updated!'})
+            else res.json({status: 'error', msg: err.message})
+          })
+        } else {
+          res.json({status: 'error', msg: err});
+        }
+      });
     } else {
       res.status(400).json({msg: 'Enter a VALID form'})
     }
