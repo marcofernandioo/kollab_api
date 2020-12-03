@@ -6,31 +6,23 @@ var permission = require('../systems/permission');
 const Member = require('../models/member');
 const Account = require('../models/account');
 
-//Display all tasks of a member/account 
-router.get('/all/:id/', (req,res) => {
+//Display all personal tasks
+router.get('/all', (req,res) => {
   if (permission.isLoggedIn(req)) {
-    if (req.params && req.params.id) {
-      Task.find({doId: req.params.id}, (err,data) => {
-        if (!err) {
-          if (data) {
-            res.json({status: 'ok', data:data});
-          } else {
-            res.json({status: 'error', msg: 'User with this member id not found'})
-          }
-        } else {
-          res.json({status: 'error', msg: err})
-        }
-      })
-    } else {
-      res.json({status: 'error', msg: 'Invalid param'});
-    }
+    Task.find ({doId: req.session.accountId}, (err,tasks) => {
+      if (!err) {
+        res.json({status: 'ok', tasks: tasks});
+      } else {
+        res.json({status: 'error', msg: err.message});
+      }
+    })
   } else {
     res.json({status: 'error', msg: 'Not logged in!'});
   }
 
 });
 
-//Find Task by ID
+//Find Task by ID -> Change to find by Title
 router.get('/find/:id', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.params.id) {
@@ -46,7 +38,7 @@ router.get('/find/:id', (req,res) => {
   } 
 })
 
-//Display Task by status 
+//Display Task by status  -> Fix this. (Halt this endpoint, use the other ones)
 router.get('/filter/:done/:doing', (req,res) => {
   if (permission.isLoggedIn(req)) {
     //Display Done/Not Done Tasks
@@ -73,7 +65,45 @@ router.get('/filter/:done/:doing', (req,res) => {
 
 //Display Task by status: whether the task is doing, done, or notdone.
 
-//Create a personal task 
+//Display Done Task
+router.get('/done', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    Task.find({doId: req.session.accountId, done: true}, (err,tasks) => {
+      if (!err) {
+        if (tasks) {
+          res.json({status: 'ok', tasks: tasks})
+        } else {
+          res.json({status: 'error', msg: 'Task not found!'});
+        }
+      } else {
+        res.json({status: 'error', msg: err.message})
+      }
+    })
+  } else {
+    res.json({status: 'error', msg: 'Not logged in'})
+  }
+})
+
+//Display Doing Task
+router.get('/doing', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    Task.find({doId: req.session.accountId, doing: true}, (err,tasks) => {
+      if (!err) {
+        if (tasks) {
+          res.json({status: 'ok', tasks: tasks})
+        } else {
+          res.json({status: 'error', msg: 'Task not found!'});
+        }
+      } else {
+        res.json({status: 'error', msg: err.message})
+      }
+    })
+  } else {
+    res.json({status: 'error', msg: 'Not logged in'})
+  }
+})
+
+//Create a personal task -> Button
 router.post('/create/account', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.body && req.body.title) {
@@ -126,14 +156,14 @@ router.post('/create/member', (req,res) => {
 })
 
 //Delete a personal task
-router.delete('/delete', (req,res) => {
+router.delete('/delete/:id', (req,res) => {
   if (permission.isLoggedIn(req)) {
     //Also implement the permission.edit system.
-    if (req.query && req.query.taskId) {
-      async.waterfall([ //Only Done task(s) could be deleted.
+    if (req.params.id) {
+      async.waterfall([ //Only Done task could be deleted.
         //1. Find the Task and check if current account can delete this task.
         function (callback) {
-          Task.findById(req.query.taskId, (err,task) => {
+          Task.findById(req.params.id, (err,task) => {
             if(!err && task) {
               if (task.doId == req.session.accountId) { //Only proceed if the Task is owned by the logged in Account.
                 callback(null, task)
@@ -156,7 +186,7 @@ router.delete('/delete', (req,res) => {
           data.remove((err) => {
             if (err) res.json({status: 'error', msg: err.message})
             else {
-              Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: req.query.taskId}}, { safe: true, upsert: true }, (err) => {
+              Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: req.params.id}}, { safe: true, upsert: true }, (err) => {
                 if (!err) {
                   res.json({status: 'ok', msg: 'Task Successfully Deleted'})
                 } else {
@@ -171,12 +201,27 @@ router.delete('/delete', (req,res) => {
         }
       })
     } else {
-      res.json({status: 'error',msg: 'You forgot to enter the taskId'})
+      res.json({status: 'error',msg: 'You forgot to enter the task id'})
     }
   } else {
     res.json({status: 'error', msg: 'Not logged in!'});
   }
    
+})
+
+//Delete All DONE Tasks.
+router.get('/deletedone', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    Task.deleteMany({doId: req.session.accountId, done: true}, (err) => {
+      if (!err) {
+        res.json({status: 'ok', msg: 'Tasks successfully deleted'})
+      } else {
+        res.json({status: 'error', msg: err.message})
+      }
+    })
+  } else {
+    res.json({status: 'error', msg: 'Not logged in'})
+  }
 })
 
 //Edit a personal task

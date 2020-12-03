@@ -1,10 +1,13 @@
 var express = require('express');
-var app = express.Router();
 var Account = require('../models/account');
+var Task = require('../models/task');
+var Member = require('../models/member');
+var Team = require('../models/team');
 var permission = require('../systems/permission');
 var crypto = require('crypto');
 var async = require('async');
 var router = express.Router();
+
 
 //Create an Account.
 router.post('/create', (req,res) => {
@@ -20,7 +23,7 @@ router.post('/create', (req,res) => {
         })
 
         new_account.save((err) => {
-            if (!err) res.json({status: 'ok', msg: 'Account Created'})
+            if (!err) res.json({status: 'ok', msg: 'Account Created. Let\'s get movin\'!!'})
             else res.json({status: 'error', msg: err.message})
         })
 
@@ -86,7 +89,7 @@ router.post('/login', (req,res) => {
                 req.session.accountId = userData._id;
                 res.json({status: 'ok', msg: 'Logged in'});
             } else {
-                res.json({status: 'error', error: err})
+                res.json({status: 'error', error: err.message})
             }
         })
     } else {
@@ -111,5 +114,52 @@ router.get('/check', (req,res) => {
         res.json({msg: 'eh.. you kinda did something wrong'})
     }
 })
+
+//Delete an Account
+router.get('/delete', (req,res) => {
+    /*
+        - Delete all tasks, members, member's task, and group's member record associated with the account.
+        - Delete Account
+    */
+    if (permission.isLoggedIn(req)) {
+        async.waterfall([
+            function (deleteAccountTasks) {
+                Task.deleteMany({doId: req.session.accountId}, (err) => {
+                    if (!err) deleteAccountTasks(null);
+                    else deleteAccountTasks(err);
+                });
+            },
+            function (deleteMembers) {
+                Member.deleteMany({account: req.session.accountId}, (err) => {
+                    if (!err) deleteMembers(null);
+                    else deleteMembers(err);
+                });
+            },
+            function (deleteTeamMember) {
+                // Account.findByIdAndUpdate(req.session.accountId, { $pull: {member: req.query.memberId}}, { safe: true, upsert: true }, (err) => {
+                //     if (!err) {
+                //       res.json({status: 'ok', msg: 'Member Successfully Deleted'})
+                //     } else {
+                //       res.json({status: 'error', msg: err.message});
+                //     }
+                // })
+                // Team.findByIdAndUpdate()
+            },
+            function (deleteAccount) {
+                Account.deleteOne(req.session.accountId, (err) => {
+                    if (!err) deleteAccount(null);
+                    else deleteAccount(err);
+                });
+            },
+        ], (err) => {
+            if (!err) res.json({status: 'ok', msg: 'Account successfully deleted. I, Marco Fernandio, sincerely thank you from the bottom of my heart! <3'});
+            else res.json({status: 'error', msg: err.message});
+        })
+        
+    } else {
+        res.json({status: 'error', msg: 'Not logged in'});
+    }
+})
+
 
 module.exports = router
