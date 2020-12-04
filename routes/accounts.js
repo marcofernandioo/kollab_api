@@ -122,40 +122,55 @@ router.get('/delete', (req,res) => {
         - Delete Account
     */
     if (permission.isLoggedIn(req)) {
+        let memberIDs = [];
         async.waterfall([
-            function (deleteAccountTasks) {
+            function (deleteAccountTasks) { //Delete personal tasks associated with the account.
                 Task.deleteMany({doId: req.session.accountId}, (err) => {
                     if (!err) deleteAccountTasks(null);
                     else deleteAccountTasks(err);
                 });
             },
-            function (deleteMembers) {
+            function (pushMemberIDs) { //List all the account's member IDs to be the filter of the next query.
+                Member.find({account: req.session.accountId}, (err,members) => {
+                    if (!err) {
+                        if (members) {
+                            members.forEach((member) => {
+                                memberIDs.push(member._id);
+                            })
+                            pushMemberIDs(null);
+                        } else {
+                            pushMemberIDs('Sorry, there\'s something wrong with our server, please try again later :(');
+                        }
+                    } else {
+                        pushMemberIDs(err);
+                    }
+                })
+            },
+            function (pullTeamMember) { //Update/pull all the Members from all the Teams which contains the member ID that we want to delete.
+                Team.updateMany({members: {$in: memberIDs}}, {$pull: {members: {$in: memberIDs}}}, (err) => {
+                    if (!err) pullTeamMember(null);
+                    else pullTeamMember('Oops..');
+                })
+            },
+            function (deleteMembers) { //Delete Members belonging to the Account that we're deleting
                 Member.deleteMany({account: req.session.accountId}, (err) => {
                     if (!err) deleteMembers(null);
                     else deleteMembers(err);
                 });
             },
-            function (deleteTeamMember) {
-                // Account.findByIdAndUpdate(req.session.accountId, { $pull: {member: req.query.memberId}}, { safe: true, upsert: true }, (err) => {
-                //     if (!err) {
-                //       res.json({status: 'ok', msg: 'Member Successfully Deleted'})
-                //     } else {
-                //       res.json({status: 'error', msg: err.message});
-                //     }
-                // })
-                // Team.findByIdAndUpdate()
-            },
-            function (deleteAccount) {
-                Account.deleteOne(req.session.accountId, (err) => {
+            function (deleteAccount) { //Delete the Account.
+                Account.deleteOne({_id: req.session.accountId}, (err) => {
                     if (!err) deleteAccount(null);
                     else deleteAccount(err);
                 });
             },
         ], (err) => {
-            if (!err) res.json({status: 'ok', msg: 'Account successfully deleted. I, Marco Fernandio, sincerely thank you from the bottom of my heart! <3'});
-            else res.json({status: 'error', msg: err.message});
+            if (!err) {
+                req.session.destroy();
+                res.json({status: 'ok', msg: 'Account successfully deleted. I, Marco Fernandio, sincerely thank you from the bottom of my heart! <3'});
+            }
+            else res.json({status: 'error', msg: err});
         })
-        
     } else {
         res.json({status: 'error', msg: 'Not logged in'});
     }
