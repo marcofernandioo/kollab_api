@@ -89,7 +89,7 @@ router.post('/login', (req,res) => {
                 req.session.accountId = userData._id;
                 res.json({status: 'ok', msg: 'Logged in'});
             } else {
-                res.json({status: 'error', error: err.message})
+                res.json({status: 'error', error: err})
             }
         })
     } else {

@@ -5,6 +5,7 @@ const tasksRouter = require('./routes/tasks');
 const accountsRouter = require('./routes/accounts');
 const membersRouter = require('./routes/members');
 const teamsRouter = require('./routes/team');
+const groupsRouter = require('./routes/groups');
 var session = require('express-session');
 const dotenv = require('dotenv');
 const app = express();
@@ -30,6 +31,7 @@ app.use('/tasks', tasksRouter);
 app.use('/accounts', accountsRouter);
 app.use('/members', membersRouter)
 app.use('/teams', teamsRouter);
+app.use('/groups', groupsRouter);
 
 app.listen(port, () => {
   console.log(`We Server Runnin' on Port ${port}`)

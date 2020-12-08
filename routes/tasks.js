@@ -22,6 +22,18 @@ router.get('/all', (req,res) => {
 
 });
 
+//For client-side testing purposes only: Display all tasks
+router.get('/alltasks', (req,res) => {
+  
+  Task.find({}, (err,tasks) => {
+    if (!err) {
+      res.json({status: 'ok', tasks});
+    } else {
+      res.json({status: 'error', msg: err});
+    }
+  })
+})
+
 //Find Task by ID -> Change to find by Title
 router.get('/find/:id', (req,res) => {
   if (permission.isLoggedIn(req)) {
@@ -68,6 +80,7 @@ router.get('/filter/:done/:doing', (req,res) => {
 //Display Done Task
 router.get('/done', (req,res) => {
   if (permission.isLoggedIn(req)) {
+
     Task.find({doId: req.session.accountId, done: true}, (err,tasks) => {
       if (!err) {
         if (tasks) {
@@ -145,10 +158,65 @@ router.post('/create/account', (req,res) => {
 })
 
 //Create a team task
-router.post('/create/member', (req,res) => {
+router.post('/assign/member', (req,res) => {
   if (permission.isLoggedIn(req)) {
-    if (req.body && req.body.title) {
+    if (req.body && req.body.title && req.body.id) {
 
+      async.waterfall([
+        function (findMember) {
+          Member.findById(req.body.id, (err,member) => {
+            if (!err) {
+              if (data) {
+                findMember(null, member.accountName);
+              } else {
+                findMember('Member not found');
+              }
+            } else {
+              findMember(err);
+            }
+          })
+        }, 
+        function (accountName, createAndSaveTask) {
+          var new_task = new Task({
+            title: req.body.title, 
+            description: req.body.description,
+            status: req.body.status,
+            createDate: Date.now(),
+            deadline: req.body.deadline,
+            doBy: accountName,
+            doId: req.body.id
+          })
+    
+          new_task.save((err,data) => {
+            if (!err) {
+              if (data) {
+                Member.findOneAndUpdate({_id: req.session.accountId}, { $push: {personalTasks: data}}, (err) => {
+                  if (!err) {
+                    // res.json({status: 'ok', msg: 'Task Created'});
+                    createAndSaveTask(null);
+                  } else {
+                    // res.json({status: 'error', msg: err});
+                    createAndSaveTask(err);
+                  }
+                });
+              } else {
+                // res.json({status: 'error', msg: 'Task Not Found'});
+                createAndSaveTask();
+              }
+            } else {
+              // res.json({status: 'error', msg: err})
+              createAndSaveTask();
+            }
+          })
+        }
+      ], (err) => {
+
+      });
+    
+      
+
+    } else {
+      res.json({status: 'error', msg: 'Enter a Valid Form'})
     }
   } else {
     res.json({status: 'error', msg: 'Not Logged In!'})

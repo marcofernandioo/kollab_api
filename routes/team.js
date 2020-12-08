@@ -2,6 +2,7 @@ var express = require('express');
 const Team = require('../models/team');
 const Permission = require('../models/permission');
 var permission = require('../systems/permission');
+var async = require('async');
 var router = express.Router();
 
 //Create a Team
@@ -59,13 +60,45 @@ router.post('/setpermission', (req,res) => {
     }
 })
 
-router.post('/delete', (req,res) => {
+router.get('/delete/:id', (req,res) => {
     if (permission.isLoggedIn(req)) {
-
+        async.waterfall([
+            function (checkEligibleDelete) {
+                Team.findById(req.params.id, (err,team) => {
+                    if (!err) {
+                        if (team) {
+                            if (team.teamOwnerId == req.session.accountId) {
+                                checkEligibleDelete(null)
+                            } else {
+                                checkEligibleDelete('No permission to delete this team');
+                            }
+                        } else {
+                            checkEligibleDelete('Try again later');
+                        }
+                    } else {
+                        checkEligibleDelete(err);
+                    }
+                })
+            }, 
+            function (deleteTeam) {
+                Team.deleteOne({_id: req.params.id}, (err) => {
+                    if (!err) {
+                        deleteTeam(null);
+                    } else {
+                        deleteTeam(err);
+                    }
+                })
+            }
+        ], (err) => {
+            if (!err) {
+                res.json({status: 'ok', msg: 'Team successfully deleted'});
+            } else {
+                res.json({status: 'error', msg: err});
+            }
+        });
     } else {
         res.json({status: 'error', msg: 'Not logged in'})
     }
-    //1. Check if logged in.
-    //2. Check if 
 })
+
 module.exports = router;
