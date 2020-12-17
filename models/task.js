@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 const Schema = new mongoose.Schema({
   title: {
     type: String,
@@ -7,15 +8,7 @@ const Schema = new mongoose.Schema({
   description: String,
   status: {
     type: String, 
-    default: "not done"
-  },
-  done: {
-    type: Boolean,
-    default: false
-  },
-  doing: {
-    type: Boolean, 
-    default: false
+    default: "notdone"
   },
   createDate: {
     type: Date,
@@ -23,13 +16,10 @@ const Schema = new mongoose.Schema({
   },
   deadline: String,
   notes: String, //notes are additional information about the status of the task. 
-  //Ex. Notes: Encountered a bug. Skipping this task for some time.
-  // doBy: {
-  //   type: mongoose.Schema.Types.ObjectId, 
-  //   name: String
-  // }
+                 //Ex. Notes: Encountered a bug. Skipping this task for some time.
   doBy: String,
-  doId: mongoose.Schema.Types.ObjectId // doId is the member's id
+  doId: mongoose.Schema.Types.ObjectId, // doId is the member's id
+  assignerId: mongoose.Schema.Types.ObjectId
 })
 
 

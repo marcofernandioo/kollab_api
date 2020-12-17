@@ -245,7 +245,7 @@ router.delete('/delete/:id', (req,res) => {
   
         //2. Check if the Task is Completed or not
         function (task, callback) {
-          if (task.done) callback(null, task)
+          if (task.status == 'done') callback(null, task)
           else callback("Task isn't Done, Complete This Task Before Deleting")
         }
   
@@ -280,7 +280,7 @@ router.delete('/delete/:id', (req,res) => {
 //Delete All DONE Tasks.
 router.get('/deletedone', (req,res) => {
   if (permission.isLoggedIn(req)) {
-    Task.deleteMany({doId: req.session.accountId, done: true}, (err) => {
+    Task.deleteMany({doId: req.session.accountId, status: 'done'}, (err) => {
       if (!err) {
         res.json({status: 'ok', msg: 'Tasks successfully deleted'})
       } else {
@@ -323,17 +323,7 @@ router.put('/update', (req,res) => {
           if (req.body.title) newTask.title = req.body.title //Edit task title
           if (req.body.description) newTask.description = req.body.description; //Edit task description
           if (req.body.status && req.body.status === 'done'){ //Edit status. Doing and Done are also being editted automatically.
-            newTask.doing = false
-            newTask.done = true
-            newTask.status = req.body.status
-          } else if (req.body.status && req.body.status === 'doing') {
-            newTask.doing = true
-            newTask.done = false
-            newTask.status = req.body.status
-          } else if (req.body.status && req.body.status === 'pending') {
-            newTask.doing = false
-            newTask.done = false
-            newTask.status = req.body.status
+            
           }
           if (req.body.deadline) newTask.deadline = req.body.deadline //Edit deadline
           if (req.body.notes) newTask.notes = req.body.notes // Edit task notes
@@ -388,5 +378,40 @@ router.post('/assign', (req,res) => {
     res.json({status: 'error', msg: 'Invalid Form'})
   }
 })
+
+//Update a personal task status
+router.get('/updatestatus', (req,res) => {
+  if (permission.isLoggedIn(req)) {
+    
+    async.waterfall([
+      function (findTask) {
+        Task.findById(req.query.id, (err,task) => {
+          if (!err) {
+            if (task) findTask(null);
+            else findTask('Please try again later'); 
+          } else {
+            findTask(err);
+          }
+        })
+      }, 
+      function (callback) {
+        let new_task = {};
+        new_task.status = req.query.status;
+        Task.findByIdAndUpdate(req.query.id, new_task, (err) => {
+          if (!err) callback(null);
+          else callback(err);
+        })
+      }
+    ], (err) => {
+      if (!err) res.json({status: 'ok', msg: 'task status updated'});
+      else res.json({status: 'error', msg: err})
+    })
+    
+  } else {
+    res.json({status: 'error', msg: 'Not logged in'})
+  }
+})
+
+//Update a Team task status
 
 module.exports = router
