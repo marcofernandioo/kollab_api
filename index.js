@@ -10,7 +10,11 @@ var session = require('express-session');
 const dotenv = require('dotenv');
 const app = express();
 app.use(cors());
+var cookieParser = require('cookie-parser');
 dotenv.config();
+
+app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+app.use(cookieParser());
 
 const port = process.env.PORT;
 app.use(express.json());
