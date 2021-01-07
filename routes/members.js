@@ -6,9 +6,9 @@ var async = require('async');
 var permission = require('../systems/permission');
 var router = express.Router();
 
-//Create a Member
-router.post('/create', (req,res) => {
-    if (permission.isLoggedIn(req)) {
+//Join a Team as a Member
+router.post('/join', (req,res) => {
+    if (permission.isLoggedIn(req)) { //Currently, everyone can invite any Accounts to be a member.
         if (req.body && req.body.position && req.body.teamId) {
 
             var new_member = new Member({
@@ -57,7 +57,7 @@ router.get('/search', (req,res) => {
                 if (data) {
                     res.json({status: 'ok', data})
                 } else {
-                    res.json({status: 'error', msg: 'Not Found'})
+                    res.json({status: 'error', msg: 'Member Not Found'})
                 }
             } else {
                 res.json({status: 'error', msg: err})
@@ -66,8 +66,8 @@ router.get('/search', (req,res) => {
     }
 })
 
-//Delete a Member
-router.get('/delete', (req,res) => {
+//Leave a Team/Group.
+router.get('/leave', (req,res) => {
     if (permission.isLoggedIn(req)) {
         if (req.query && req.query.memberId) {
             async.waterfall([

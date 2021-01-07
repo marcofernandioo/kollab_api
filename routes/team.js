@@ -5,6 +5,7 @@ var permission = require('../systems/permission');
 var async = require('async');
 var router = express.Router();
 
+
 //Create a Team
 router.post('/create', (req,res) => {
     if (permission.isLoggedIn(req)) {
@@ -14,11 +15,13 @@ router.post('/create', (req,res) => {
                 teamDescription: req.body.description, 
                 teamOwner: req.session.fullName,
                 teamOwnerId: req.session.accountId,
-                members: [], 
+                members: [req.session.accountId], 
                 groups: []
             });
             new_team.save((err) => {
-                if (!err) res.json({status: 'ok', msg: 'Team Successfully Created'});
+                if (!err) {
+                    res.json({status: 'ok', msg: 'Team Successfully Created'});
+                }
                 else res.json({status: 'error', msg: err});
             })
         }
@@ -39,7 +42,7 @@ router.patch('/edit', (req,res) => {
                 if (!err) {
                     res.json({status: 'ok', msg: 'Team updated'});
                 } else {
-                    res.json({status: 'ok', msg: 'Team updated'});
+                    res.json({status: 'error', msg: 'Please try again later'});
                 }
             })
         } else {
@@ -100,5 +103,8 @@ router.get('/delete/:id', (req,res) => {
         res.json({status: 'error', msg: 'Not logged in'})
     }
 })
+
+
+
 
 module.exports = router;

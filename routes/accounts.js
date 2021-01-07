@@ -10,7 +10,7 @@ var router = express.Router();
 
 
 //Create an Account.
-router.post('/create', (req,res) => {
+router.post('/register', (req,res) => {
     if (req.body && req.body.fullName && req.body.email && req.body.password ) {
         const key = crypto.randomBytes(16).toString('hex');
         const hashed = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
@@ -23,7 +23,7 @@ router.post('/create', (req,res) => {
         })
 
         new_account.save((err) => {
-            if (!err) res.json({status: 'ok', msg: 'Account Created. Let\'s get movin\'!!'})
+            if (!err) res.json({status: 'ok', msg: 'Account Created. Let\'s get movin\', champ!'})
             else res.json({status: 'error', msg: err.message})
         })
 
@@ -32,7 +32,7 @@ router.post('/create', (req,res) => {
     }
 })
 
-//Search an Account.
+//Search an Account. Testing only
 router.get('/search', (req,res) => {
     if (req.query.id) {
         Account.findById(req.query.id, (err,data) => {
@@ -70,10 +70,10 @@ router.post('/login', (req,res) => {
                 });
             }, 
             function (checkPasswordCallback) {
-                //2. Get secret and hash
+                //2. Get password and key
                 let password = userData.password;
                 let key = userData.key;
-                //3. Use this secret to encrypt password
+                //3. Use the previous key to encrypt the inputted password, and store it in thisHash var.
                 const thisHash = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
                 //4. Compare this encrypted password to hash
                 if (thisHash == password){
@@ -89,7 +89,7 @@ router.post('/login', (req,res) => {
                 req.session.accountId = userData._id;
                 res.json({status: 'ok', msg: 'Logged in'});
             } else {
-                res.json({status: 'error', error: err})
+                res.json({status: 'error', msg: err});
             }
         })
     } else {
@@ -106,7 +106,7 @@ router.get('/logout', (req,res) => {
     
 })
 
-//Check Login
+//Check Login. Testing only
 router.get('/check', (req,res) => {
     if (permission.isLoggedIn(req)) {
         res.json({msg: 'Logged in!', email: req.session.email, fullname: req.session.fullName})
@@ -114,6 +114,49 @@ router.get('/check', (req,res) => {
         res.json({msg: 'eh.. you kinda did something wrong'})
     }
 })
+
+//Change password (NOT RESET PASSWORD). Pending.
+router.post('/changepassword', (req,res) => {
+    if (permission.isLoggedIn(req)) {
+        if (req.body && req.body.currentPass && req.body.newPass) {
+            async.waterfall([
+                function (findAccount) {
+                    Account.findById(req.session.accountId, (err,acc) => {
+                        if (!err) {
+                            findAccount(null, acc.password, acc.key);
+                        } else findAccount(err);
+                    })
+                },
+                function (password, key, checkPasswordMatch) {
+                    const encryptedInputPass = crypto.createHmac('sha256',key).update(req.body.currentPass).digest('hex');
+                    if (encryptedInputPass == password) checkPasswordMatch(null);
+                    else checkPasswordMatch('Incorrect Password');
+                }, 
+                function (updatePassword) {
+                    const key = crypto.randomBytes(16).toString('hex');
+                    const encryptedNewPassword = crypto.createHmac('sha256', key).update(req.body.newPass).digest('hex');
+                    Account.findByIdAndUpdate(req.session.accountId, {password: encryptedNewPassword, key: key}, (err) => {
+                        if (!err) updatePassword(null);
+                        else updatePassword(err);
+                    })
+                }
+                
+            ], (err) => {
+                if (!err) res.json({status: 'ok', msg: 'Password changed'})
+                else res.json({status: 'error', msg: err})
+            })
+        } else {
+            res.json({status: 'error', msg: 'Please enter a valid form'});
+        }
+    } else {
+        res.json({status: 'error', msg: 'You must be logged in'})
+    }
+})
+// Change Password Algorithm
+// 1. Enter old password -> Check if hashed input password == hashed old password.
+// 2. Enter new password.
+// 3. Create new key, Encrypt the new password using that key.
+// 4. Update old password and key with the new password and key.
 
 //Delete an Account
 router.get('/delete', (req,res) => {
@@ -171,6 +214,22 @@ router.get('/delete', (req,res) => {
             }
             else res.json({status: 'error', msg: err});
         })
+    } else {
+        res.json({status: 'error', msg: 'Not logged in'});
+    }
+})
+
+//Update bio
+router.post('/updatebio', (req,res) => {
+    if (permission.isLoggedIn(req)) {
+        if (req.body && req.body.bio && req.body.bio.length) {
+            Account.findByIdAndUpdate(req.session.accountId, {bio: req.body.bio}, (err) => {
+                if (!err) res.json({status: 'ok', msg: 'bio updated!'});
+                else res.json({status: 'error', msg: 'Please try again later'})
+            })
+        } else {
+            res.json({status: 'error', msg: 'Invalid form'})
+        }
     } else {
         res.json({status: 'error', msg: 'Not logged in'});
     }

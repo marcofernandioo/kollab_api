@@ -22,9 +22,8 @@ router.get('/all', (req,res) => {
 
 });
 
-//For client-side testing purposes only: Display all tasks
+//For testing purposes only: Display all tasks
 router.get('/alltasks', (req,res) => {
-  
   Task.find({}, (err,tasks) => {
     if (!err) {
       res.json({status: 'ok', tasks});
@@ -34,7 +33,7 @@ router.get('/alltasks', (req,res) => {
   })
 })
 
-//Find Task by ID -> Change to find by Title
+//Find Task by ID -> Will this be useful?
 router.get('/find/:id', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.params.id) {
@@ -50,71 +49,30 @@ router.get('/find/:id', (req,res) => {
   } 
 })
 
-//Display Task by status  -> Fix this. (Halt this endpoint, use the other ones)
-router.get('/filter/:done/:doing', (req,res) => {
-  if (permission.isLoggedIn(req)) {
-    //Display Done/Not Done Tasks
-    if (req.query && req.query.done != null) {
-      Task.find({done: req.query.done}, (err,tasks) => {
-        if (!err) res.json({tasks})
-        else res.json({status: 'error', msg: err.message})
-      })
-
-    //Display 'Doing' Tasks
-    } else if (req.query && req.query.doing) {
-      Task.find({doing: req.query.doing}, (err,tasks) => {
-        if (!err) res.json({tasks})
-        else res.json({status: 'error', msg: err.message})
-      })
-    } else {
-      res.json({status: 'error', msg: 'Enter Valid URL'})
-    }
-  } else {
-    res.json({status: 'error', msg: 'Not Logged In!'});
-  }
-  
-})
 
 //Display Task by status: whether the task is doing, done, or notdone.
-
-//Display Done Task
-router.get('/done', (req,res) => {
+router.get('/display', (req,res) => {
   if (permission.isLoggedIn(req)) {
-
-    Task.find({doId: req.session.accountId, done: true}, (err,tasks) => {
-      if (!err) {
-        if (tasks) {
-          res.json({status: 'ok', tasks: tasks})
+    if (req.query.status) {
+      Task.find({_id: req.session.accountId, status: req.query.status}, (err,tasks) => {
+        if (!err) {
+          if (tasks) {
+            res.json({status: 'ok', tasks});
+          } else {
+            res.json({status: 'error', msg: 'Please try again later'});
+          }
         } else {
-          res.json({status: 'error', msg: 'Task not found!'});
+          res.json({status: 'error', msg: err});
         }
-      } else {
-        res.json({status: 'error', msg: err.message})
-      }
-    })
+      })
+    } else {
+      res.json({status: 'error', msg: 'Please try again later'});
+    }
   } else {
-    res.json({status: 'error', msg: 'Not logged in'})
+    res.json({status: 'error', msg: 'You must be logged in'});
   }
 })
 
-//Display Doing Task
-router.get('/doing', (req,res) => {
-  if (permission.isLoggedIn(req)) {
-    Task.find({doId: req.session.accountId, doing: true}, (err,tasks) => {
-      if (!err) {
-        if (tasks) {
-          res.json({status: 'ok', tasks: tasks})
-        } else {
-          res.json({status: 'error', msg: 'Task not found!'});
-        }
-      } else {
-        res.json({status: 'error', msg: err.message})
-      }
-    })
-  } else {
-    res.json({status: 'error', msg: 'Not logged in'})
-  }
-})
 
 //Create a personal task -> Button
 router.post('/create/account', (req,res) => {
@@ -192,25 +150,22 @@ router.post('/assign/member', (req,res) => {
               if (data) {
                 Member.findOneAndUpdate({_id: req.session.accountId}, { $push: {personalTasks: data}}, (err) => {
                   if (!err) {
-                    // res.json({status: 'ok', msg: 'Task Created'});
                     createAndSaveTask(null);
                   } else {
-                    // res.json({status: 'error', msg: err});
                     createAndSaveTask(err);
                   }
                 });
               } else {
-                // res.json({status: 'error', msg: 'Task Not Found'});
                 createAndSaveTask();
               }
             } else {
-              // res.json({status: 'error', msg: err})
               createAndSaveTask();
             }
           })
         }
       ], (err) => {
-
+        if (!err) res.json({status: 'ok', msg: 'Task successfully assigned'});
+        else res.json({status: 'error', msg: err});
       });
     
       
@@ -280,13 +235,37 @@ router.delete('/delete/:id', (req,res) => {
 //Delete All DONE Tasks.
 router.get('/deletedone', (req,res) => {
   if (permission.isLoggedIn(req)) {
-    Task.deleteMany({doId: req.session.accountId, status: 'done'}, (err) => {
-      if (!err) {
-        res.json({status: 'ok', msg: 'Tasks successfully deleted'})
-      } else {
-        res.json({status: 'error', msg: err.message})
+    taskIDs = [];
+    async.waterfall([
+      function (findDoneTasks) {
+        Task.find({status: 'done'}, (err,tasks) => {
+          if (!err) {
+            tasks.forEach(task => {
+              taskIDs.push(task._id);
+            })
+            findDoneTasks(null)
+          } else {
+            findDoneTasks(err);
+          }
+        });
+      },
+      function (deleteTasks) {
+        Task.deleteMany({doId: req.session.accountId, status: 'done'}, (err) => {
+          if (!err) deleteTasks(null);
+          else deleteTasks(err);
+        })
+      }, 
+      function (deletePersonalTasksList) {
+        Account.findByIdAndUpdate(req.session.accountId, { $pull: {personalTasks: { $in: taskIDs}}}, (err) => {
+          if (!err) deletePersonalTasksList(null);
+          else deletePersonalTasksList(err);
+        });
       }
+    ], (err) => {
+      if (!err) res.json({status: 'ok', msg: 'Done tasks are successfully deleted'});
+      else res.json({status: 'error', msg:err});
     })
+    
   } else {
     res.json({status: 'error', msg: 'Not logged in'})
   }
