@@ -12,20 +12,46 @@ var router = express.Router();
 //Create an Account.
 router.post('/register', (req,res) => {
     if (req.body && req.body.fullName && req.body.email && req.body.password ) {
-        const key = crypto.randomBytes(16).toString('hex');
-        const hashed = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
 
-        var new_account = new Account({
-            fullName: req.body.fullName, 
-            email: req.body.email,
-            password: hashed,
-            key: key
-        })
+        async.waterfall([
+            function (checkDuplicateEmail) { //Check if another same email in DB exists, we can't have duplicates
+                Account.findOne({email: req.body.email}, (err, data) => {
+                    if (!err) {
+                        if (data) checkDuplicateEmail('This email has been used, please use a different email');
+                        else checkDuplicateEmail(null);
+                    }
+                    else checkDuplicateEmail();
+                })
+            }, 
+            function (createAccount) { //Create the account
+                const key = crypto.randomBytes(16).toString('hex');
+                const hashed = crypto.createHmac('sha256', key).update(req.body.password).digest('hex');
 
-        new_account.save((err) => {
-            if (!err) res.json({status: 'ok', msg: 'Account Created. Let\'s get movin\', champ!'})
-            else res.json({status: 'error', msg: err.message})
-        })
+                var new_account = new Account({
+                    fullName: req.body.fullName, 
+                    email: req.body.email,
+                    password: hashed,
+                    key: key
+                })
+                createAccount(null, new_account);
+            }
+        ], (err,data) => {
+            // Saving the account to the DB.
+            if (!err) {
+                if (data) {
+                    data.save((err) => {
+                        if (!err) res.json({status: 'ok', msg: 'Account Created. Let\'s get movin\', champ!'})
+                        else res.json({status: 'error', msg: err.message})
+                    })
+                } else res.json({status: 'error', msg: 'Please try again later..'})
+            } else {
+                res.json({status: 'error', msg: err})
+            }
+        });
+
+        
+
+        
 
     } else {
         res.json({status: 'error', msg: 'Please Enter a Valid Form'})
@@ -59,7 +85,7 @@ router.post('/login', (req,res) => {
                 Account.findOne({email: req.body.email}, (err,data) => {
                     if (!err){
                         if (!data) {
-                            getUserCallback('Invalid Email');
+                            getUserCallback('Account not found');
                         } else {
                             userData = data;
                             getUserCallback(null)
@@ -115,7 +141,7 @@ router.get('/check', (req,res) => {
     }
 })
 
-//Change password (NOT RESET PASSWORD). Pending.
+//Change password (NOT RESET PASSWORD).
 router.post('/changepassword', (req,res) => {
     if (permission.isLoggedIn(req)) {
         if (req.body && req.body.currentPass && req.body.newPass) {

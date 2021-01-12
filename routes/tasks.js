@@ -76,7 +76,7 @@ router.get('/display', (req,res) => {
 
 //Create a personal task -> Button
 router.post('/create/account', (req,res) => {
-  if (permission.isLoggedIn(req)) {
+  // if (permission.isLoggedIn(req)) {
     if (req.body && req.body.title) {
     
       var new_task = new Task({
@@ -108,11 +108,11 @@ router.post('/create/account', (req,res) => {
       })
 
     } else {
-      res.json({status: 'error', msg: 'Enter a Valid Form'})
+      res.json({status: 'error', msg: 'Enter a valid Form'})
     }
-  } else {
-    res.json({status: 'error', msg: 'Not Logged In!'})
-  }
+  // } else {
+  //   res.json({status: 'error', msg: 'Not Logged In!'})
+  // }
 })
 
 //Create a team task
