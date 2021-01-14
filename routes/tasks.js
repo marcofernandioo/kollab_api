@@ -35,7 +35,7 @@ router.get('/alltasks', (req,res) => {
 
 //Find Task by ID -> Will this be useful?
 router.get('/find/:id', (req,res) => {
-  if (permission.isLoggedIn(req)) {
+  // if (permission.isLoggedIn(req)) {
     if (req.params.id) {
       Task.findById(req.params.id, (err,data) => {
         if (!err) res.json({data:data})
@@ -44,9 +44,9 @@ router.get('/find/:id', (req,res) => {
     } else {
       res.json({status: 'error',msg: 'Enter Valid URL'})
     }
-  } else {
-    res.json({status: 'error', msg: 'Not Logged In!'});
-  } 
+  // } else {
+  //   res.json({status: 'error', msg: 'Not Logged In!'});
+  // } 
 })
 
 
@@ -179,7 +179,7 @@ router.post('/assign/member', (req,res) => {
 })
 
 //Delete a personal task
-router.delete('/delete/:id', (req,res) => {
+router.get('/delete/:id', (req,res) => {
   if (permission.isLoggedIn(req)) {
     //Also implement the permission.edit system.
     if (req.params.id) {
@@ -272,7 +272,7 @@ router.get('/deletedone', (req,res) => {
 })
 
 //Edit a personal task
-router.put('/update', (req,res) => {
+router.post('/update', (req,res) => {
   if (permission.isLoggedIn(req)) {
     if (req.body && req.body.id && (req.body.title || req.body.description || req.body.status || req.body.deadline || req.body.notes)){
       async.waterfall([

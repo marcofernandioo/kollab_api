@@ -12,9 +12,8 @@ var router = express.Router();
 //Create an Account.
 router.post('/register', (req,res) => {
     if (req.body && req.body.fullName && req.body.email && req.body.password ) {
-
         async.waterfall([
-            function (checkDuplicateEmail) { //Check if another same email in DB exists, we can't have duplicates
+            function (checkDuplicateEmail) { //Check if another same email in DB exists, we can't have duplicates in the database.
                 Account.findOne({email: req.body.email}, (err, data) => {
                     if (!err) {
                         if (data) checkDuplicateEmail('This email has been used, please use a different email');
@@ -48,11 +47,6 @@ router.post('/register', (req,res) => {
                 res.json({status: 'error', msg: err})
             }
         });
-
-        
-
-        
-
     } else {
         res.json({status: 'error', msg: 'Please Enter a Valid Form'})
     }
@@ -61,7 +55,7 @@ router.post('/register', (req,res) => {
 //Search an Account. Testing only
 router.get('/search', (req,res) => {
     if (req.query.id) {
-        Account.findById(req.query.id, (err,data) => {
+        Account.findById(req.query.id, (err,data) => { // Search the account based on Account id
             if (!err) {
                 if (data) {
                     res.json({status: 'ok', data})
@@ -80,8 +74,7 @@ router.post('/login', (req,res) => {
     if (req.body && req.body.email && req.body.password){
         let userData = null;
         async.waterfall([
-            //1. Get email and password.
-            function (getUserCallback) {
+            function (getUserCallback) { // 1. Check if the Account exists.
                 Account.findOne({email: req.body.email}, (err,data) => {
                     if (!err){
                         if (!data) {
@@ -109,12 +102,12 @@ router.post('/login', (req,res) => {
                 }
             }
         ], (err) => {
-            if (!err) {
+            if (!err) { // Create session if there's no error
                 req.session.email = userData.email;
                 req.session.fullName = userData.fullName;
                 req.session.accountId = userData._id;
                 res.json({status: 'ok', msg: 'Logged in'});
-            } else {
+            } else { // Return error on error.
                 res.json({status: 'error', msg: err});
             }
         })
@@ -125,7 +118,7 @@ router.post('/login', (req,res) => {
 
 //Logout
 router.get('/logout', (req,res) => {
-    if (permission.isLoggedIn(req)) {
+    if (permission.isLoggedIn(req)) { //Destroy session if it exists.
         req.session.destroy();
         res.json({status: 'ok', msg: "you kicked yourself out"});
     }
@@ -146,21 +139,23 @@ router.post('/changepassword', (req,res) => {
     if (permission.isLoggedIn(req)) {
         if (req.body && req.body.currentPass && req.body.newPass) {
             async.waterfall([
-                function (findAccount) {
+                function (findAccount) { // 1. Check if the account exists.
                     Account.findById(req.session.accountId, (err,acc) => {
                         if (!err) {
                             findAccount(null, acc.password, acc.key);
                         } else findAccount(err);
                     })
                 },
-                function (password, key, checkPasswordMatch) {
+                function (password, key, checkPasswordMatch) { // 2. Confirm if the inputted password is the same as the password stored in the DB.
                     const encryptedInputPass = crypto.createHmac('sha256',key).update(req.body.currentPass).digest('hex');
                     if (encryptedInputPass == password) checkPasswordMatch(null);
                     else checkPasswordMatch('Incorrect Password');
                 }, 
-                function (updatePassword) {
+                function (updatePassword) { // Update the password
+                    // Creating a new key and hashing the new password based on the newly created key.
                     const key = crypto.randomBytes(16).toString('hex');
                     const encryptedNewPassword = crypto.createHmac('sha256', key).update(req.body.newPass).digest('hex');
+                    // Update/Change the Account's key and password
                     Account.findByIdAndUpdate(req.session.accountId, {password: encryptedNewPassword, key: key}, (err) => {
                         if (!err) updatePassword(null);
                         else updatePassword(err);
@@ -193,13 +188,13 @@ router.get('/delete', (req,res) => {
     if (permission.isLoggedIn(req)) {
         let memberIDs = [];
         async.waterfall([
-            function (deleteAccountTasks) { //Delete personal tasks associated with the account.
+            function (deleteAccountTasks) { // Delete personal tasks associated with the account.
                 Task.deleteMany({doId: req.session.accountId}, (err) => {
                     if (!err) deleteAccountTasks(null);
                     else deleteAccountTasks(err);
                 });
             },
-            function (pushMemberIDs) { //List all the account's member IDs to be the filter of the next query.
+            function (pushMemberIDs) { //List all the Account's member IDs to be the filter of the next query.
                 Member.find({account: req.session.accountId}, (err,members) => {
                     if (!err) {
                         if (members) {
@@ -215,7 +210,7 @@ router.get('/delete', (req,res) => {
                     }
                 })
             },
-            function (pullTeamMember) { //Update/pull all the Members from all the Teams which contains the member ID that we want to delete.
+            function (pullTeamMember) { //Update/pull all the Members from all the Teams which contains the member ID that we want to delete which was stored in the memberIDs array.
                 Team.updateMany({members: {$in: memberIDs}}, {$pull: {members: {$in: memberIDs}}}, (err) => {
                     if (!err) pullTeamMember(null);
                     else pullTeamMember('Oops..');
